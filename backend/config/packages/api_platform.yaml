@@ -1,0 +1,24 @@
+api_platform:
+    title: 'Les Beignets de Mamie — API'
+    description: 'Catalogue, commandes et contact de la boutique en ligne.'
+    version: '1.0.0'
+    show_webby: false
+    formats:
+        jsonld: ['application/ld+json']
+        json: ['application/json']
+    docs_formats:
+        jsonld: ['application/ld+json']
+        jsonopenapi: ['application/vnd.openapi+json']
+        html: ['text/html']
+    patch_formats:
+        json: ['application/merge-patch+json']
+    swagger:
+        api_keys:
+            JWT:
+                name: Authorization
+                type: header
+    defaults:
+        stateless: true
+        pagination_items_per_page: 30
+        cache_headers:
+            vary: ['Content-Type', 'Authorization', 'Origin']

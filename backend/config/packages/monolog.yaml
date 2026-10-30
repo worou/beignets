@@ -1,0 +1,10 @@
+monolog:
+    handlers:
+        main:
+            type: stream
+            path: php://stderr
+            level: '%env(default:log_level_default:LOG_LEVEL)%'
+            channels: ['!event', '!doctrine']
+
+parameters:
+    log_level_default: info

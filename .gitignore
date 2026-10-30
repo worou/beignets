@@ -1,0 +1,5 @@
+# Serveur PostgreSQL local (données de développement)
+/.pgdata-local/
+
+# Configuration locale de Claude Code
+/.claude/

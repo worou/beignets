@@ -1,0 +1,26 @@
+parameters:
+    shop.whatsapp_number: '%env(SHOP_WHATSAPP_NUMBER)%'
+    shop.delivery_fee_cents: '%env(int:SHOP_DELIVERY_FEE_CENTS)%'
+    shop.free_delivery_threshold_cents: '%env(int:SHOP_FREE_DELIVERY_THRESHOLD_CENTS)%'
+    shop.minimum_order_cents: '%env(int:SHOP_MINIMUM_ORDER_CENTS)%'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        bind:
+            int $deliveryFeeCents: '%shop.delivery_fee_cents%'
+            int $freeDeliveryThresholdCents: '%shop.free_delivery_threshold_cents%'
+            int $minimumOrderCents: '%shop.minimum_order_cents%'
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Enum/'
+            - '../src/Kernel.php'
+
+    App\State\OrderProcessor:
+        bind:
+            $persistProcessor: '@api_platform.doctrine.orm.state.persist_processor'
