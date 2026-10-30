@@ -19,7 +19,8 @@ Au premier démarrage, le conteneur API installe les dépendances Composer, gén
 crée le catalogue (`app:seed`) et le compte admin.
 
 **Espace admin** : http://localhost:5173/admin — `admin@beignetsdemamie.fr` / `Mamie2026!`
-(à changer dans `docker-compose.yml` avant toute mise en ligne). Voir [Administration](#administration).
+(à changer dans `docker-compose.yml` avant toute mise en ligne).
+L’onglet **Comptes** de l’espace admin permet d’ajouter ou retirer des administrateurs et de changer son mot de passe. Voir [Administration](#administration).
 
 ## Sans Docker
 
@@ -111,6 +112,9 @@ frontend/
 | PATCH | `/api/products/{id}`, `/api/product_variants/{id}` | admin |
 | POST | `/api/contact_messages` | public |
 | POST | `/api/login_check` | renvoie le JWT |
+| GET / POST | `/api/admin/accounts` | admin (liste, ajout d’un administrateur) |
+| DELETE | `/api/admin/accounts/{id}` | admin (impossible sur son propre compte) |
+| POST | `/api/admin/password` | admin (change son propre mot de passe) |
 
 ## À personnaliser avant la mise en ligne
 - Numéro WhatsApp (`SHOP_WHATSAPP_NUMBER`, repris de la maquette), e-mail, liens réseaux sociaux.

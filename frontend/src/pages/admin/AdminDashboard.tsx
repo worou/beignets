@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { api, ApiError } from '../../api/client';
-import type { ContactMessage, Order, OrderStatus, Product, Variant } from '../../api/types';
+import type { AdminAccount, ContactMessage, Order, OrderStatus, Product, Variant } from '../../api/types';
 import { Field } from '../Contact';
 import { Spinner } from '../../components/Ui';
 import { useAuth } from '../../context/AuthContext';
@@ -10,7 +10,8 @@ import { formatDate, formatPrice, STATUS_LABELS } from '../../utils/format';
 import { whatsappLink } from '../../utils/whatsapp';
 import { WhatsAppIcon } from '../../components/Icons';
 
-type Tab = 'orders' | 'products' | 'messages';
+type Tab = 'orders' | 'products' | 'messages' | 'accounts';
+const MIN_PASSWORD_LENGTH = 10;
 const STATUSES = Object.keys(STATUS_LABELS) as OrderStatus[];
 
 export default function AdminDashboard() {
@@ -32,10 +33,12 @@ export default function AdminDashboard() {
           <button className={tab === 'orders' ? 'is-active' : ''} onClick={() => setTab('orders')}>Commandes</button>
           <button className={tab === 'products' ? 'is-active' : ''} onClick={() => setTab('products')}>Produits & prix</button>
           <button className={tab === 'messages' ? 'is-active' : ''} onClick={() => setTab('messages')}>Messages</button>
+          <button className={tab === 'accounts' ? 'is-active' : ''} onClick={() => setTab('accounts')}>Comptes</button>
         </div>
         {tab === 'orders' && <OrdersPanel onAuthError={logout} />}
         {tab === 'products' && <ProductsPanel onAuthError={logout} />}
         {tab === 'messages' && <MessagesPanel onAuthError={logout} />}
+        {tab === 'accounts' && <AccountsPanel onAuthError={logout} />}
       </div>
     </section>
   );
@@ -255,5 +258,121 @@ function MessagesPanel({ onAuthError }: { onAuthError: () => void }) {
         </article>
       ))}
     </div>
+  );
+}
+
+function AccountsPanel({ onAuthError }: { onAuthError: () => void }) {
+  const guard = useAuthGuard(onAuthError);
+  const [accounts, setAccounts] = useState<AdminAccount[] | null>(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => { api.adminAccounts().then(setAccounts).catch((e) => setError(guard(e))); }, [guard]);
+
+  const remove = async (a: AdminAccount) => {
+    if (!window.confirm(`Supprimer l’accès de ${a.email} ? Cette personne ne pourra plus se connecter.`)) return;
+    try {
+      await api.deleteAdminAccount(a.id);
+      setAccounts((l) => l?.filter((x) => x.id !== a.id) ?? null);
+    } catch (e) { setError(guard(e)); }
+  };
+
+  return (
+    <div className="admin-accounts">
+      <div className="stack">
+        <div className="card admin-accounts__card">
+          <h2>Administrateurs</h2>
+          {error && <p className="alert alert--error">{error}</p>}
+          {!accounts ? <Spinner /> : (
+            <ul className="admin-accounts__list">
+              {accounts.map((a) => (
+                <li key={a.id}>
+                  <span>{a.email}{a.me && <small className="muted"> (vous)</small>}</span>
+                  {!a.me && <button className="btn btn--outline btn--sm" onClick={() => remove(a)}>Supprimer</button>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <NewAccountForm guard={guard} onCreated={(a) => setAccounts((l) => [...(l ?? []), a].sort((x, y) => x.email.localeCompare(y.email)))} />
+      </div>
+      <PasswordForm guard={guard} />
+    </div>
+  );
+}
+
+function NewAccountForm({ guard, onCreated }: { guard: (e: unknown) => string; onCreated: (a: AdminAccount) => void }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [done, setDone] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setErrors({}); setDone('');
+    try {
+      const a = await api.createAdminAccount(email, password);
+      onCreated(a);
+      setDone(`Compte ${a.email} créé. Transmettez-lui son mot de passe de vive voix.`);
+      setEmail(''); setPassword('');
+    } catch (err) {
+      setErrors(err instanceof ApiError && Object.keys(err.violations).length ? err.violations : { _: guard(err) });
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <form className="card form admin-accounts__card" onSubmit={onSubmit}>
+      <h2>Ajouter un administrateur</h2>
+      {done && <p className="alert alert--success">{done}</p>}
+      {errors._ && <p className="alert alert--error">{errors._}</p>}
+      <Field label="E-mail" error={errors.email}>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="off" required />
+      </Field>
+      <Field label="Mot de passe" error={errors.password} hint={`${MIN_PASSWORD_LENGTH} caractères minimum`}>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} required />
+      </Field>
+      <button className="btn btn--primary btn--sm" disabled={busy}>{busy ? 'Création…' : 'Créer le compte'}</button>
+    </form>
+  );
+}
+
+function PasswordForm({ guard }: { guard: (e: unknown) => string }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setDone(false);
+    if (next !== confirm) { setErrors({ confirm: 'Les deux mots de passe ne correspondent pas.' }); return; }
+    setBusy(true); setErrors({});
+    try {
+      await api.changePassword(current, next);
+      setDone(true);
+      setCurrent(''); setNext(''); setConfirm('');
+    } catch (err) {
+      setErrors(err instanceof ApiError && Object.keys(err.violations).length ? err.violations : { _: guard(err) });
+    } finally { setBusy(false); }
+  };
+
+  return (
+    <form className="card form admin-accounts__card" onSubmit={onSubmit}>
+      <h2>Mon mot de passe</h2>
+      {done && <p className="alert alert--success">Mot de passe modifié.</p>}
+      {errors._ && <p className="alert alert--error">{errors._}</p>}
+      <Field label="Mot de passe actuel" error={errors.currentPassword}>
+        <input type="password" value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" required />
+      </Field>
+      <Field label="Nouveau mot de passe" error={errors.newPassword} hint={`${MIN_PASSWORD_LENGTH} caractères minimum`}>
+        <input type="password" value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" minLength={MIN_PASSWORD_LENGTH} required />
+      </Field>
+      <Field label="Confirmer le nouveau mot de passe" error={errors.confirm}>
+        <input type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" required />
+      </Field>
+      <button className="btn btn--primary btn--sm" disabled={busy}>{busy ? 'Enregistrement…' : 'Changer mon mot de passe'}</button>
+    </form>
   );
 }

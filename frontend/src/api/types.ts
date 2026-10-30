@@ -102,3 +102,10 @@ export interface ContactMessage {
   handled: boolean;
   createdAt: string;
 }
+
+export interface AdminAccount {
+  id: number;
+  email: string;
+  /** Le compte de la personne connectée. */
+  me: boolean;
+}

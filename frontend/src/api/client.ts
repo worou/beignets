@@ -1,4 +1,4 @@
-import type { ContactMessage, NewOrder, Order, OrderStatus, Product, Category, ShopConfig, Variant } from './types';
+import type { AdminAccount, ContactMessage,NewOrder, Order, OrderStatus, Product, Category, ShopConfig, Variant } from './types';
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
 const TOKEN_KEY = 'bdm_admin_token';
@@ -96,5 +96,13 @@ export const api = {
     request<ContactMessage>(`/api/contact_messages/${id}`, {
       method: 'PATCH', auth: true, body: JSON.stringify({ handled }),
       headers: { 'Content-Type': 'application/merge-patch+json' },
+    }),
+  adminAccounts: () => request<AdminAccount[]>('/api/admin/accounts', { auth: true }),
+  createAdminAccount: (email: string, password: string) =>
+    request<AdminAccount>('/api/admin/accounts', { method: 'POST', auth: true, body: JSON.stringify({ email, password }) }),
+  deleteAdminAccount: (id: number) => request<void>(`/api/admin/accounts/${id}`, { method: 'DELETE', auth: true }),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<{ detail: string }>('/api/admin/password', {
+      method: 'POST', auth: true, body: JSON.stringify({ currentPassword, newPassword }),
     }),
 };

@@ -718,3 +718,10 @@ p { margin: 0 0 1em; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+.admin-accounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: start; }
+.admin-accounts__card { padding: 20px; }
+.admin-accounts__card h2 { font-size: 1.15rem; margin: 0 0 12px; }
+.admin-accounts__list { list-style: none; margin: 0; padding: 0; }
+.admin-accounts__list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.admin-accounts__list li:first-child { border-top: 0; }
